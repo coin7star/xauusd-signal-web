@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XAUAI — Sinyal XAUUSD</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="logo">XAU<span>AI</span></div>
+      <div class="badge-live">
+        <div class="dot" id="liveIndicator"></div>
+        <span id="liveText">LIVE</span>
+      </div>
+    </header>
+
+    <!-- HARGA -->
+    <div class="price-card">
+      <div class="pair">XAU / USD · MT5 REALTIME</div>
+      <div class="price" id="currentPrice">---</div>
+      <div class="price-change" id="priceChange">Menunggu data...</div>
+    </div>
+
+    <!-- SINYAL INDIKATOR -->
+    <div class="signal-grid">
+      <div class="sig-card">
+        <div class="sig-label">MFI</div>
+        <div class="sig-value" id="mfiValue">--</div>
+      </div>
+      <div class="sig-card">
+        <div class="sig-label">EMA 9</div>
+        <div class="sig-value" id="ema9Value">--</div>
+      </div>
+      <div class="sig-card">
+        <div class="sig-label">EMA 20</div>
+        <div class="sig-value" id="ema20Value">--</div>
+      </div>
+    </div>
+
+    <!-- AI ANALYSIS CARD -->
+    <div class="ai-card">
+      <div class="ai-header">
+        <div class="ai-icon">✦</div>
+        <div class="ai-title">Analisa AI Claude</div>
+        <button class="refresh-btn" id="analyzeBtn" onclick="runAiAnalysis()">Analisa ↗</button>
+      </div>
+      <div class="ai-signal" id="aiSignal">Belum ada sinyal</div>
+      <div class="ai-reason" id="aiReason">Klik tombol Analisa atau tunggu update otomatis.</div>
+      <div class="ai-conf">
+        <span class="conf-label">Confidence</span>
+        <div class="conf-bar">
+          <div class="conf-fill" id="confFill" style="width:0%"></div>
+        </div>
+        <span class="conf-val" id="confVal">--</span>
+      </div>
+    </div>
+
+    <!-- INDICATOR DETAIL -->
+    <div class="indicators-grid">
+      <div class="ind-card">
+        <div class="ind-name">RSI 14</div>
+        <div class="ind-value" id="rsiValue">--</div>
+        <div class="ind-sub" id="rsiLabel">-</div>
+      </div>
+      <div class="ind-card">
+        <div class="ind-name">Trend</div>
+        <div class="ind-value" id="trendValue">--</div>
+        <div class="ind-sub" id="trendSub">-</div>
+      </div>
+      <div class="ind-card">
+        <div class="ind-name">MFI Signal</div>
+        <div class="ind-value" id="mfiSignal">--</div>
+        <div class="ind-sub" id="mfiSub">-</div>
+      </div>
+      <div class="ind-card">
+        <div class="ind-name">Last Update</div>
+        <div class="ind-value" id="lastUpdate" style="font-size:13px">--</div>
+        <div class="ind-sub">WIB</div>
+      </div>
+    </div>
+
+    <!-- ALERT PANEL -->
+    <div class="alert-strip" id="alertStrip">
+      <div class="alert-icon">🔔</div>
+      <div class="alert-text" id="alertText">
+        Aktifkan notifikasi biar lo gak ketinggalan sinyal BUY/SELL!
+      </div>
+      <button class="notif-btn" onclick="requestNotification()">Aktifkan</button>
+    </div>
+
+    <!-- HISTORY SINYAL -->
+    <div class="history-section">
+      <div class="section-title">Riwayat Sinyal</div>
+      <div id="signalHistory" class="history-list">
+        <div class="history-empty">Belum ada riwayat sinyal</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="firebase.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
