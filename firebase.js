@@ -5,13 +5,13 @@
 // ============================================
 
 const firebaseConfig = {
-  apiKey: "ISI_API_KEY_FIREBASE_LO",
-  authDomain: "ISI_AUTH_DOMAIN_LO",
-  databaseURL: "ISI_DATABASE_URL_LO",
-  projectId: "ISI_PROJECT_ID_LO",
-  storageBucket: "ISI_STORAGE_BUCKET_LO",
-  messagingSenderId: "ISI_SENDER_ID_LO",
-  appId: "ISI_APP_ID_LO"
+  apiKey: "AIzaSyAu4cQilVo_L47UZexNk4BQ8J2w1LI4Vr0",
+  authDomain: "xauusd-signal-web.firebaseapp.com",
+  databaseURL: "https://xauusd-signal-web-default-rtdb.firebaseio.com",
+  projectId: "xauusd-signal-web",
+  storageBucket: "xauusd-signal-web.firebasestorage.app",
+  messagingSenderId: "854389377912",
+  appId: "1:854389377912:web:0fad2bbbd1ae13b207968d"
 };
 
 // Initialize Firebase
