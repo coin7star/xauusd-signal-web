@@ -98,14 +98,13 @@ export default {
       const emoji = signal === 'BUY' ? '🟢' : signal === 'SELL' ? '🔴' : '🟡';
       const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
-      const message = `${emoji} *XAUAI SIGNAL — ${signal}*
+      const message = `${emoji} <b>XAUAI SIGNAL — ${signal}</b>
 
-💰 *Harga:* \`${parseFloat(price).toFixed(2)}\`
-🎯 *Confidence:* ${confidence}%
-📊 *Analisa:* ${reason}
+💰 <b>Harga:</b> <code>${parseFloat(price).toFixed(2)}</code>
+🎯 <b>Confidence:</b> ${confidence}%
+📊 <b>Analisa:</b> ${reason}
 
-⏰ ${waktu} WIB
-🔗 xauusd\\-signal\\-web\\.pages\\.dev`;
+⏰ ${waktu} WIB`;
 
       let tgRes;
       try {
@@ -115,7 +114,7 @@ export default {
           body: JSON.stringify({
             chat_id: env.TELEGRAM_CHAT_ID,
             text: message,
-            parse_mode: 'MarkdownV2'
+            parse_mode: 'HTML'
           })
         });
       } catch (e) {
