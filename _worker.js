@@ -13,7 +13,6 @@ export default {
 
     const url = new URL(request.url);
 
-    // ---- Health check ----
     if (url.pathname === '/api/health') {
       return new Response(JSON.stringify({
         status: 'ok',
@@ -25,7 +24,6 @@ export default {
       });
     }
 
-    // ---- Main: /api/analyze ----
     if (url.pathname === '/api/analyze' && request.method === 'POST') {
 
       let body;
@@ -85,7 +83,8 @@ export default {
       });
     }
 
-    return jsonError('Route tidak ditemukan', 404);
+    // ✅ FIXED: serve index.html dan static files
+    return env.ASSETS.fetch(request);
   }
 };
 
