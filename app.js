@@ -2,13 +2,11 @@
 // app.js — Logika utama XAUAI
 // ============================================
 
-// ---- STATE ----
-let lastPrice      = null;
-let signalHistory  = [];
-const MAX_HISTORY  = 10;
-let isAnalyzing    = false;
+let lastPrice     = null;
+let signalHistory = [];
+const MAX_HISTORY = 10;
+let isAnalyzing   = false;
 
-// ---- INIT ----
 document.addEventListener('DOMContentLoaded', () => {
   listenToFirebase();
   checkNotifStatus();
@@ -22,21 +20,17 @@ function listenToFirebase() {
     hideError();
     const data = snapshot.val();
     if (!data) {
-      showError('Firebase terhubung, tapi belum ada data dari MT5. Pastikan indikator MQ5 aktif di chart XAUUSD.');
+      showError('Firebase konek, tapi belum ada data dari MT5. Pastikan indikator MQ5 aktif di chart XAUUSD.');
       return;
     }
-
     updatePriceDisplay(data);
     updateIndicators(data);
-
-    // Auto analisa tiap kali MT5 kirim data baru (jika flag aktif)
     if (data.autoAnalyze && !isAnalyzing) {
       runAiAnalysis();
     }
-
   }, (error) => {
     setDisconnected();
-    showError('Gagal konek ke Firebase: ' + error.message);
+    showError('Gagal konek Firebase: ' + error.message);
   });
 }
 
@@ -54,8 +48,8 @@ function updatePriceDisplay(data) {
     const diff = price - lastPrice;
     const pct  = ((diff / lastPrice) * 100).toFixed(2);
     const sign = diff >= 0 ? '▲ +' : '▼ ';
-    changeEl.textContent  = `${sign}${diff.toFixed(2)} (${pct}%)`;
-    changeEl.className    = 'price-change ' + (diff >= 0 ? 'up' : 'down');
+    changeEl.textContent = `${sign}${diff.toFixed(2)} (${pct}%)`;
+    changeEl.className   = 'price-change ' + (diff >= 0 ? 'up' : 'down');
   } else {
     changeEl.textContent = 'Data live dari MT5';
     changeEl.className   = 'price-change';
@@ -63,7 +57,6 @@ function updatePriceDisplay(data) {
 
   lastPrice = price;
 
-  // Jam update
   const now = new Date();
   document.getElementById('lastUpdate').textContent =
     now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -73,17 +66,17 @@ function updatePriceDisplay(data) {
 // UPDATE INDIKATOR
 // ============================================
 function updateIndicators(data) {
-  const mfi  = parseFloat(data.mfi  ?? 0);
-  const ema9 = parseFloat(data.ema9 ?? 0);
-  const ema20= parseFloat(data.ema20?? 0);
-  const rsi  = parseFloat(data.rsi  ?? 50);
+  const mfi  = parseFloat(data.mfi   ?? 0);
+  const ema9 = parseFloat(data.ema9  ?? 0);
+  const ema20= parseFloat(data.ema20 ?? 0);
+  const rsi  = parseFloat(data.rsi   ?? 50);
 
   // MFI
   const mfiEl = document.getElementById('mfiValue');
   mfiEl.textContent = mfi.toFixed(1);
   mfiEl.className   = 'sig-value ' + getMfiClass(mfi);
 
-  // EMA 9 & 20 — warna berdasarkan cross
+  // EMA
   const ema9El  = document.getElementById('ema9Value');
   const ema20El = document.getElementById('ema20Value');
   ema9El.textContent  = ema9.toFixed(2);
@@ -97,25 +90,27 @@ function updateIndicators(data) {
   }
 
   // RSI
-  document.getElementById('rsiValue').textContent = rsi.toFixed(1);
+  const rsiEl = document.getElementById('rsiValue');
+  rsiEl.textContent  = rsi.toFixed(1);
+  rsiEl.style.color  = getRsiColor(rsi);
   document.getElementById('rsiLabel').textContent = getRsiLabel(rsi);
-  document.getElementById('rsiValue').style.color = getRsiColor(rsi);
 
   // Trend
-  const trend = data.trend ?? 'Sideways';
+  const trend   = data.trend ?? 'Sideways';
   const trendEl = document.getElementById('trendValue');
-  trendEl.textContent  = trend;
-  trendEl.style.color  = getTrendColor(trend);
+  trendEl.textContent = trend;
+  trendEl.style.color = getTrendColor(trend);
   document.getElementById('trendSub').textContent = data.timeframe ?? 'H4';
 
   // MFI Signal
-  document.getElementById('mfiSignal').textContent = getMfiSignal(mfi);
-  document.getElementById('mfiSub').textContent    = getMfiSub(mfi);
-  document.getElementById('mfiSignal').style.color = getMfiColor(mfi);
+  const mfiSigEl = document.getElementById('mfiSignal');
+  mfiSigEl.textContent = getMfiSignal(mfi);
+  mfiSigEl.style.color = getMfiColor(mfi);
+  document.getElementById('mfiSub').textContent = getMfiSub(mfi);
 }
 
 // ============================================
-// AI ANALYSIS via Cloudflare Worker → Groq
+// AI ANALYSIS
 // ============================================
 async function runAiAnalysis() {
   if (isAnalyzing) return;
@@ -127,32 +122,30 @@ async function runAiAnalysis() {
   const confFill = document.getElementById('confFill');
   const confVal  = document.getElementById('confVal');
 
-  btn.disabled     = true;
-  btn.textContent  = 'Menganalisa...';
+  btn.disabled         = true;
+  btn.textContent      = 'Menganalisa...';
   signalEl.textContent = '⏳ AI sedang berpikir...';
   signalEl.className   = 'ai-signal';
   reasonEl.textContent = 'Menghubungi Groq · Llama 3.3...';
   confFill.style.width = '0%';
   confVal.textContent  = '--%';
 
-  // Ambil data Firebase terbaru
   let data;
   try {
     const snapshot = await window.xauRef.once('value');
     data = snapshot.val();
   } catch (e) {
-    showAiError('Gagal baca data Firebase: ' + e.message);
+    showAiError('Gagal baca Firebase: ' + e.message);
     resetBtn(btn);
     return;
   }
 
   if (!data) {
-    showAiError('Data dari MT5 belum tersedia. Pastikan indikator MQ5 sudah aktif.');
+    showAiError('Data MT5 belum tersedia. Pastikan indikator MQ5 aktif.');
     resetBtn(btn);
     return;
   }
 
-  // Buat prompt trading
   const prompt = `
 Data indikator XAUUSD saat ini:
 - Harga: ${parseFloat(data.price).toFixed(2)}
@@ -191,25 +184,22 @@ Nilai confidence antara 50-95
 
     const result = await response.json();
 
-    // Parse JSON dari Groq — bersihkan markdown kalau ada
     let aiData;
     try {
       const raw   = result.text ?? '{}';
       const clean = raw.replace(/```json|```/g, '').trim();
-      // Cari JSON object dalam response kalau ada teks tambahan
       const match = clean.match(/\{[\s\S]*\}/);
       aiData = JSON.parse(match ? match[0] : clean);
-    } catch (parseErr) {
-      throw new Error('AI mengembalikan format bukan JSON. Raw: ' + (result.text ?? '').slice(0, 100));
+    } catch {
+      throw new Error('AI return format bukan JSON. Raw: ' + (result.text ?? '').slice(0, 100));
     }
 
-    // Validasi field
     if (!['BUY', 'SELL', 'WAIT'].includes(aiData.signal)) {
       throw new Error('Signal tidak valid: ' + aiData.signal);
     }
 
     // Tampilkan hasil
-    const cls = aiData.signal === 'BUY' ? 'buy-signal'
+    const cls = aiData.signal === 'BUY'  ? 'buy-signal'
               : aiData.signal === 'SELL' ? 'sell-signal' : 'wait-signal';
 
     signalEl.textContent = `${aiData.emoji ?? ''} ${aiData.signal}`;
@@ -220,7 +210,7 @@ Nilai confidence antara 50-95
 
     hideError();
 
-    // Tambah ke history UI
+    // Tambah ke history
     addToHistory({
       signal:     aiData.signal,
       emoji:      aiData.emoji ?? '',
@@ -235,16 +225,17 @@ Nilai confidence antara 50-95
       price:      data.price,
       confidence: aiData.confidence ?? 70,
       timestamp:  Date.now()
-    }).catch(() => {}); // silent fail kalau rules Firebase belum diset
+    }).catch(() => {});
 
-    // Kirim notif browser untuk BUY/SELL
+    // Kirim notifikasi browser + Telegram
     if (aiData.signal !== 'WAIT') {
       sendNotification(aiData.signal, aiData.reason, data.price);
+      sendTelegram(aiData.signal, data.price, aiData.reason, aiData.confidence ?? 70);
     }
 
   } catch (err) {
     showAiError('Error: ' + err.message);
-    console.error('AI analysis error:', err);
+    console.error('AI error:', err);
   }
 
   resetBtn(btn);
@@ -289,6 +280,28 @@ function sendNotification(signal, reason, price) {
     icon:  '/favicon.ico',
     badge: '/favicon.ico'
   });
+}
+
+// ============================================
+// TELEGRAM NOTIFICATION
+// ============================================
+async function sendTelegram(signal, price, reason, confidence) {
+  if (signal === 'WAIT') return;
+  try {
+    const res = await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signal, price, reason, confidence })
+    });
+    const data = await res.json();
+    if (data.success) {
+      console.log('✅ Telegram notif terkirim, message_id:', data.message_id);
+    } else {
+      console.warn('⚠️ Telegram gagal:', data.error);
+    }
+  } catch (e) {
+    console.warn('⚠️ Gagal kirim Telegram:', e.message);
+  }
 }
 
 // ============================================
@@ -373,12 +386,6 @@ function getMfiColor(mfi) {
   if (mfi > 70) return '#e74c3c';
   if (mfi < 30) return '#2ecc71';
   return '#f39c12';
-}
-
-function getMfiClass(mfi) {
-  if (mfi > 70) return 'sell';
-  if (mfi < 30) return 'buy';
-  return 'neutral';
 }
 
 function getRsiLabel(rsi) {
