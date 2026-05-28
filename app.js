@@ -76,12 +76,14 @@ function updateIndicators(data) {
   mfiEl.textContent = mfi.toFixed(1);
   mfiEl.className   = 'sig-value ' + getMfiClass(mfi);
 
-  // EMA
+  // EMA — warna + label trend
   const ema9El  = document.getElementById('ema9Value');
   const ema20El = document.getElementById('ema20Value');
   ema9El.textContent  = ema9.toFixed(2);
   ema20El.textContent = ema20.toFixed(2);
-  if (ema9 > ema20) {
+
+  const emaTrend = data.emaTrend ?? (ema9 > ema20 ? 'Uptrend' : 'Downtrend');
+  if (emaTrend === 'Uptrend') {
     ema9El.className  = 'sig-value buy';
     ema20El.className = 'sig-value sell';
   } else {
@@ -93,20 +95,37 @@ function updateIndicators(data) {
   const rsiEl = document.getElementById('rsiValue');
   rsiEl.textContent  = rsi.toFixed(1);
   rsiEl.style.color  = getRsiColor(rsi);
-  document.getElementById('rsiLabel').textContent = getRsiLabel(rsi);
+  document.getElementById('rsiLabel').textContent = data.rsiZone ?? getRsiLabel(rsi);
 
-  // Trend
-  const trend   = data.trend ?? 'Sideways';
+  // Trend + EMA Cross
   const trendEl = document.getElementById('trendValue');
-  trendEl.textContent = trend;
-  trendEl.style.color = getTrendColor(trend);
-  document.getElementById('trendSub').textContent = data.timeframe ?? 'H4';
+  trendEl.textContent = emaTrend;
+  trendEl.style.color = getTrendColor(emaTrend);
+
+  const cross    = data.emaCross ?? 'None';
+  const strength = data.emaTrendStrength ?? '';
+  let crossLabel = strength;
+  if (cross === 'GoldenCross') crossLabel = '✨ Golden Cross!';
+  if (cross === 'DeathCross')  crossLabel = '💀 Death Cross!';
+  document.getElementById('trendSub').textContent = crossLabel || data.timeframe || 'H4';
 
   // MFI Signal
   const mfiSigEl = document.getElementById('mfiSignal');
-  mfiSigEl.textContent = getMfiSignal(mfi);
+  mfiSigEl.textContent = data.mfiZone ?? getMfiSignal(mfi);
   mfiSigEl.style.color = getMfiColor(mfi);
   document.getElementById('mfiSub').textContent = getMfiSub(mfi);
+
+  // Pre-bias hint dari MQ5
+  const preBias  = data.preBias  ?? 'WAIT';
+  const buyScore  = data.buyScore  ?? 0;
+  const sellScore = data.sellScore ?? 0;
+  const signalEl  = document.getElementById('aiSignal');
+  const reasonEl  = document.getElementById('aiReason');
+
+  if (signalEl.textContent === 'Belum ada sinyal') {
+    reasonEl.textContent =
+      `Pre-analysis MQ5: ${preBias} (Buy score: ${buyScore}/5 | Sell score: ${sellScore}/5). Klik Analisa untuk konfirmasi AI.`;
+  }
 }
 
 // ============================================
@@ -147,27 +166,41 @@ async function runAiAnalysis() {
   }
 
   const prompt = `
-Data indikator XAUUSD saat ini:
+Data indikator XAUUSD saat ini (H4):
+
+HARGA & EMA:
 - Harga: ${parseFloat(data.price).toFixed(2)}
-- MFI (${data.mfi > 80 ? 'OVERBOUGHT' : data.mfi < 20 ? 'OVERSOLD' : 'NORMAL'}): ${parseFloat(data.mfi).toFixed(1)}
 - EMA 9: ${parseFloat(data.ema9).toFixed(2)}
 - EMA 20: ${parseFloat(data.ema20).toFixed(2)}
-- EMA Cross: ${parseFloat(data.ema9) > parseFloat(data.ema20) ? 'Golden Cross (Bullish)' : 'Death Cross (Bearish)'}
-- RSI 14: ${parseFloat(data.rsi ?? 50).toFixed(1)}
-- Trend: ${data.trend ?? 'Sideways'}
-- Timeframe: ${data.timeframe ?? 'H4'}
+- EMA Trend: ${data.emaTrend ?? 'N/A'} (EMA9 ${data.emaTrend === 'Uptrend' ? 'DI ATAS' : 'DI BAWAH'} EMA20)
+- EMA Crossover: ${data.emaCross ?? 'None'} ${data.emaCross === 'GoldenCross' ? '← BULLISH KUAT' : data.emaCross === 'DeathCross' ? '← BEARISH KUAT' : ''}
+- EMA Trend Strength: ${data.emaTrendStrength ?? 'N/A'}
+- EMA Gap: ${parseFloat(data.emaGapPct ?? 0).toFixed(4)}%
 
-Aturan:
+MOMENTUM:
+- MFI: ${parseFloat(data.mfi).toFixed(1)} (${data.mfiZone ?? 'N/A'})
+- RSI 14: ${parseFloat(data.rsi ?? 50).toFixed(1)} (${data.rsiZone ?? 'N/A'})
+
+PRE-ANALYSIS MQ5:
+- Bias awal: ${data.preBias ?? 'WAIT'}
+- Buy score: ${data.buyScore ?? 0}/5
+- Sell score: ${data.sellScore ?? 0}/5
+
+ATURAN ANALISA:
+- EMA9 > EMA20 = Uptrend (bullish bias)
+- EMA9 < EMA20 = Downtrend (bearish bias)
+- Golden Cross = sinyal bullish kuat
+- Death Cross = sinyal bearish kuat
 - MFI > 80 = overbought → potensi SELL
 - MFI < 20 = oversold → potensi BUY
-- EMA9 > EMA20 = bullish bias
-- EMA9 < EMA20 = bearish bias
+- RSI > 70 = overbought, RSI < 30 = oversold
+- Konfirmasi terbaik: EMA trend + MFI + RSI searah
 
-Berikan sinyal trading. Jawab HANYA dengan JSON ini (tanpa teks lain):
+Berikan sinyal trading final. Jawab HANYA dengan JSON:
 {"signal":"BUY","emoji":"⬆️","reason":"alasan singkat bahasa Indonesia max 2 kalimat","confidence":75}
 
-Nilai signal hanya boleh: "BUY", "SELL", atau "WAIT"
-Nilai confidence antara 50-95
+Nilai signal: "BUY", "SELL", atau "WAIT"
+Confidence: 50-95
 `.trim();
 
   try {
@@ -210,7 +243,7 @@ Nilai confidence antara 50-95
 
     hideError();
 
-    // Tambah ke history
+    // History
     addToHistory({
       signal:     aiData.signal,
       emoji:      aiData.emoji ?? '',
@@ -219,7 +252,7 @@ Nilai confidence antara 50-95
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     });
 
-    // Simpan ke Firebase history
+    // Simpan ke Firebase
     window.historyRef.push({
       signal:     aiData.signal,
       price:      data.price,
@@ -227,7 +260,7 @@ Nilai confidence antara 50-95
       timestamp:  Date.now()
     }).catch(() => {});
 
-    // Kirim notifikasi browser + Telegram
+    // Notifikasi browser + Telegram
     if (aiData.signal !== 'WAIT') {
       sendNotification(aiData.signal, aiData.reason, data.price);
       sendTelegram(aiData.signal, data.price, aiData.reason, aiData.confidence ?? 70);
@@ -295,7 +328,7 @@ async function sendTelegram(signal, price, reason, confidence) {
     });
     const data = await res.json();
     if (data.success) {
-      console.log('✅ Telegram notif terkirim, message_id:', data.message_id);
+      console.log('✅ Telegram terkirim, message_id:', data.message_id);
     } else {
       console.warn('⚠️ Telegram gagal:', data.error);
     }
@@ -402,7 +435,7 @@ function getRsiColor(rsi) {
 
 function getTrendColor(trend) {
   const t = (trend ?? '').toLowerCase();
-  if (t.includes('bull') || t.includes('up'))   return '#2ecc71';
-  if (t.includes('bear') || t.includes('down')) return '#e74c3c';
+  if (t.includes('up')   || t.includes('bull')) return '#2ecc71';
+  if (t.includes('down') || t.includes('bear')) return '#e74c3c';
   return '#f39c12';
 }
